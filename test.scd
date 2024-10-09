@@ -1,7 +1,7 @@
 j = JV404.new("/home/jildert/Music/404bank0");
 s.boot
-j.samples[0][1].play
-Synth(\jv404, [buf: j.samples[0][0]]);
+j.samples[0][1].b.play
+Synth(\jv404, [buf: j.samples[0][0].b]);
 j.samples
 Env.adsr()
 PathName(PathName("test10.wav").fileNameWithoutExtension).endNumber
@@ -62,30 +62,66 @@ Pdef(\testje,
 Pbind(\instrument, \jv404,
   \type, \jv404,
   \sampler, j,
-  \dur, 0.1,
-  \delta, 0.25,
-  \rate,Pseq([2, 1, 1, 2], inf), 
-  \amp, 1,
-  \id, Pseq([0, 1, 2, 0], inf),
+  [\dur, \delta], Pseqs("■□□□■□□□■□□□■▪□□", inf) / 16,
+  // \dur, 0.1,
+  // \delta, 0.25,
+  \rate,Pseq([1, 1, 1, 1], inf), 
+  \loop, 0,
+  \amp, Pseq([1, 1, 0.3, 0.5], inf),
+  \a, 0.04,
+  \r, Pseq([0.1, 0.2, 0.3], inf),
+  \s, 0.5,
+  \curve, -2,
+  \d, 0.3,
+  \id, Pseq([9, 1, 2, 0], inf),
   // \buf, 1,
   // \endPosAdd, 0,
+  // \out, [0,~reverb],
   \startPosAdd,Pseq([0.0, 0, 0, 0.0], inf),
 )).play;
 )
-Pen
+~reverbSynth
 Rect
+x = Plotter.new("X");
+x = j.samples[0][0].b.plot
+x.inspect
 Event
 Buffer
 RecordBuf
-Boolean
-CondVar
-j.samples[0][0].gui
+Synth
+Sweep
+
+j.samples[0][9].gui
 j.samples[0][0].b.numFrames
 j.recordBuffer.play
 j.samples[0][0].b.plot
 j.samples[0][0].b.play
 j.samples[0][0].b.numFrames
+x = Synth(\jv404, [buf: j.samples[0][0].b, loop: 1, doneAction: 1]);
+x.set(\replay, 1)
+x.run
+x.free
 0.123.asInteger
+(
+    SynthDef(\jv4043, {
+      var player, env;
+      var buffer = \buf.ir(0);
+      var startPos = \startPos.kr(0);
+      var doneAction = \doneAction.kr(2);
+      var endPos = \endPos.kr(1);
+      var loop = \loop.kr(0);
+      // var phasor = Phasor.ar(0, BufRateScale.kr(buffer) * \rate.ar(1), startPos * BufFrames.kr(buffer), endPos * BufFrames.kr(buffer), startPos * BufFrames.kr(buffer));
+      var envGate = \gate.kr(1);
+      var phasor = Sweep.ar(\replay.tr(1), BufSampleRate.ir(buffer) * \rate.kr(1)) + (BufFrames.ir(buffer) * startPos);
+      var envGate2 = EnvGate.new(1, Trig.ar(1-loop, BufDur.kr(buffer) * (1.0 - (1.0 - endPos) - startPos)), fadeTime: 1e-10, doneAction: doneAction); // When loop is on, don't trigger this env
+      player = BufRd.ar(1, buffer, phase: phasor, loop: 1); // Loop means wrap
+      env = Env.adsr(\a.kr(1e-8), \d.kr(0.1), \s.kr(1.0), \r.kr(0.1), curve: -4).ar(gate: envGate, doneAction: doneAction);
+      player = Pan2.ar(player, \pan.kr(0));
+      Out.ar(\out.kr(0), player * \amp.kr(0.4));
+    }).add; 
+)
+Synth(\jv404, [buf: j.samples[0][0].b, amp: 1, loop: 0]);
+j.samples[0][0].b.play
 
 j.recordBuffer.copyData(j.samples[0][0].b, numSamples: j.samples[0][0].b.numFrames);
 j.recordBuffer.plot
@@ -109,4 +145,8 @@ SynthDef(\jv404Recorder, {
 )
 b.plot
 {SoundIn.ar(0)}.scope
-b.plot
+j.saveSettings
+j.samples[0][0].render
+j.loadSettings
+String
+"a\nb\nc\n".split($\n)
